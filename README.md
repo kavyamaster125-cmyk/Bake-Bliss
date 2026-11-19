@@ -13,11 +13,12 @@ Bake Bliss is a full-stack PHP & MySQL web application designed for home and pro
 - [Environment Configuration](#environment-configuration)
 - [Database Setup & Importing `database.sql`](#database-setup--importing-databasesql)
 - [Running with Docker](#running-with-docker)
-- [Deploying to a Live Public URL](#deploying-to-a-live-public-url)
+- [Deploying to a Live Public URL (Permanent Free Options)](#deploying-to-a-live-public-url-permanent-free-options)
   - [Important Note Regarding GitHub Pages](#important-note-regarding-github-pages)
-  - [Option 1: Deploy to Railway (Recommended)](#option-1-deploy-to-railway-recommended)
-  - [Option 2: Deploy to Render (Docker Web Service)](#option-2-deploy-to-render-docker-web-service)
-  - [Option 3: Traditional cPanel / Shared PHP Hosting](#option-3-traditional-cpanel--shared-php-hosting)
+  - [Why Railway Free Trial Expires After 30 Days](#why-railway-free-trial-expires-after-30-days)
+  - [Permanent Option 1: Render (Docker) + TiDB Cloud (Free Forever MySQL)](#permanent-option-1-render-docker--tidb-cloud-free-forever-mysql-recommended)
+  - [Permanent Option 2: InfinityFree (Dedicated PHP + MySQL Hosting)](#permanent-option-2-infinityfree-dedicated-php--mysql-hosting)
+  - [Trial Option 3: Railway (30-Day Free Trial)](#trial-option-3-railway-30-day-free-trial)
 - [Git Workflow & Pushing to GitHub](#git-workflow--pushing-to-github)
 
 ---
@@ -36,7 +37,7 @@ Bake Bliss is a full-stack PHP & MySQL web application designed for home and pro
 ## Tech Stack
 
 - **Backend**: PHP 8.2+ (PDO MySQL extension)
-- **Database**: MySQL 5.7+ / 8.0+ or MariaDB 10.4+
+- **Database**: MySQL 5.7+ / 8.0+ or MariaDB 10.4+ (or TiDB Serverless Cloud)
 - **Web Server**: Apache 2.4 (with `mod_rewrite`)
 - **Frontend**: HTML5, Vanilla JavaScript (ES6+), Modern CSS3 (CSS Grid & Flexbox)
 - **Containerization**: Docker (Debian-based Apache image)
@@ -148,12 +149,13 @@ Then visit: `http://localhost:8000`
 
 | Variable | Description | Default | Example |
 | :--- | :--- | :--- | :--- |
-| `DB_HOST` | Database host hostname or IP | `localhost` | `127.0.0.1` / `mysql.railway.internal` |
-| `DB_PORT` | MySQL connection port | `3306` | `3306` |
-| `DB_NAME` | Database name | `bakebliss` | `railway` / `production_db` |
-| `DB_USER` | MySQL username | `root` | `root` / `admin` |
+| `DB_HOST` | Database host hostname or IP | `localhost` | `127.0.0.1` / `gateway01.us-east-1.prod.aws.tidbcloud.com` |
+| `DB_PORT` | MySQL connection port | `3306` | `3306` / `4000` |
+| `DB_NAME` | Database name | `bakebliss` | `bakebliss` / `test` |
+| `DB_USER` | MySQL username | `root` | `root` / `3vXYZ.root` |
 | `DB_PASS` | MySQL user password | `""` (empty) | `your_secure_password` |
-| `DATABASE_URL` | Full database URL (cloud hosts) | `null` | `mysql://user:pass@host:3306/db` |
+| `DB_SSL` | Enable SSL for remote cloud databases | `false` | `true` |
+| `DATABASE_URL` | Full database URL (cloud hosts) | `null` | `mysql://user:pass@host:3306/db?ssl=true` |
 | `APP_ENV` | Application environment | `local` | `production` |
 
 ---
@@ -175,90 +177,83 @@ Access the application at [http://localhost:8080](http://localhost:8080).
 
 ---
 
-## Deploying to a Live Public URL
+## Deploying to a Live Public URL (Permanent Free Options)
 
 ### Important Note Regarding GitHub Pages
 
 > [!IMPORTANT]
 > **GitHub Pages cannot run PHP or MySQL.**  
-> GitHub Pages is strictly a static web host for HTML, CSS, and client-side JavaScript. Because Bake Bliss requires PHP server-side execution, user session management, file uploads, and a MySQL relational database, it must be deployed to a cloud platform that supports PHP and databases.
+> GitHub Pages only serves static files (HTML, CSS, JS). Bake Bliss requires PHP server-side execution, user session management, file uploads, and a MySQL relational database.
 
-Below are step-by-step guides for free and popular hosting platforms.
+### Why Railway Free Trial Expires After 30 Days
 
----
+Railway provides a **$5 one-time trial credit valid for 30 days**. After 30 days, Railway shuts down services unless you upgrade to their paid Hobby plan ($5/month).
 
-### Option 1: Deploy to Railway (Recommended)
-
-[Railway.app](https://railway.app/) is the fastest and easiest platform to deploy containerized PHP + MySQL apps directly from a GitHub repository.
-
-#### Step 1: Provision a MySQL Database on Railway
-1. Sign in to [Railway.app](https://railway.app/) using your GitHub account.
-2. Click **New Project** → Select **Provision MySQL**.
-3. Railway will provision a managed MySQL instance. Click the MySQL card and select the **Variables** tab to view your credentials (`MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`, or `MYSQL_URL`).
-
-#### Step 2: Import `database.sql` on Railway
-1. Click the MySQL service on your Railway canvas.
-2. Open the **Data** or **Query** tab.
-3. Paste the contents of `database.sql` and execute the queries (or use the built-in database migration that runs on first app launch).
-
-#### Step 3: Deploy the Web Application
-1. In the same project canvas, click **Create** / **New Service** → **GitHub Repo**.
-2. Select your repository (`6_OEP_CO-BTech-III-SEM-V-Div-1_ODD-25`).
-3. Railway will automatically detect the `Dockerfile` and start the build.
-
-#### Step 4: Configure Environment Variables
-1. Click the Web Service card → Go to the **Variables** tab.
-2. Add the following environment variables (you can reference Railway's MySQL service variables directly):
-   - `DB_HOST` = `${{MySQL.MYSQLHOST}}`
-   - `DB_PORT` = `${{MySQL.MYSQLPORT}}`
-   - `DB_NAME` = `${{MySQL.MYSQLDATABASE}}`
-   - `DB_USER` = `${{MySQL.MYSQLUSER}}`
-   - `DB_PASS` = `${{MySQL.MYSQLPASSWORD}}`
-   *(Or simply set `DATABASE_URL` = `${{MySQL.MYSQL_URL}}`)*
-
-#### Step 5: Generate Public Domain
-1. In the Web Service card, go to **Settings** → **Networking** → Click **Generate Domain**.
-2. Your live application will be instantly accessible at: `https://<your-app>.up.railway.app`
+If you want a **100% permanently free deployment that never expires**, choose one of the two options below:
 
 ---
 
-### Option 2: Deploy to Render (Docker Web Service)
+### Permanent Option 1: Render (Docker) + TiDB Cloud (Free Forever MySQL) (Recommended)
 
-1. Sign in to [Render.com](https://render.com/).
-2. **Database**: Provision a free MySQL database on a cloud database provider such as [Aiven](https://aiven.io/), [TiDB Cloud](https://tidbcloud.com/), or [Clever Cloud](https://www.clever-cloud.com/). Import `database.sql` using their web console or phpMyAdmin.
-3. **Web Service**:
-   - In Render, click **New +** → **Web Service**.
-   - Connect your GitHub repository.
-   - Set **Runtime** to **Docker** (Render uses the provided `Dockerfile`).
-   - Under **Environment Variables**, add:
-     - `DB_HOST`: Your cloud database host
-     - `DB_PORT`: Database port (e.g., `3306`)
-     - `DB_NAME`: Database name
-     - `DB_USER`: Database username
-     - `DB_PASS`: Database password
-4. Click **Create Web Service**. Render builds the container and provides a free SSL domain:
-   `https://<your-service>.onrender.com`
+This gives you a permanent, free live public URL connected directly to your GitHub repository with automatic redeploys on every `git push`.
+
+#### Step 1: Create a Free MySQL Database on TiDB Cloud (Never Expires)
+1. Go to [TiDB Cloud](https://tidbcloud.com/) and sign up for free (no credit card required).
+2. Click **Create Cluster** → Choose **Serverless** (Free 5 GB storage, permanently free).
+3. Under **Security Settings**, generate a password and copy your connection credentials:
+   - Host (e.g., `gateway01.us-east-1.prod.aws.tidbcloud.com`)
+   - Port: `4000`
+   - User (e.g., `xxxx.root`)
+   - Password
+   - Database: `test` (or create `bakebliss`)
+4. In TiDB Cloud web console, open **Chat2Query** or **SQL Editor** and run the contents of [database.sql](database.sql) to create the tables.
+
+#### Step 2: Deploy Web App on Render (Free Forever)
+1. Go to [Render.com](https://render.com/) and sign in with your GitHub account.
+2. Click **New +** → **Web Service**.
+3. Select your repository: `6_OEP_CO-BTech-III-SEM-V-Div-1_ODD-25`.
+4. Choose **Docker** as the Runtime (Render automatically detects your [Dockerfile](Dockerfile)).
+5. Under **Instance Type**, choose **Free**.
+6. Under **Environment Variables**, click **Add Environment Variable**:
+   - `DB_HOST`: *(Your TiDB Cloud host)*
+   - `DB_PORT`: `4000`
+   - `DB_NAME`: `test` (or `bakebliss`)
+   - `DB_USER`: *(Your TiDB Cloud user)*
+   - `DB_PASS`: *(Your TiDB Cloud password)*
+   - `DB_SSL`: `true`
+7. Click **Create Web Service**. Render builds the image and gives you a free live URL with HTTPS (e.g., `https://bakebliss.onrender.com`).
 
 ---
 
-### Option 3: Traditional cPanel / Shared PHP Hosting
+### Permanent Option 2: InfinityFree (Dedicated PHP + MySQL Hosting)
 
-If deploying to traditional shared hosting (e.g., Hostinger, Bluehost, Namecheap, or free hosts like InfinityFree):
+[InfinityFree](https://www.infinityfree.com/) provides permanent free hosting specifically designed for PHP and MySQL with no time limits.
 
-1. **Upload Files**: Upload the project files to your hosting server's `public_html` directory via cPanel File Manager or FTP/SFTP (exclude `RazerCortexGameClip` and `.git`).
-2. **Create Database**:
-   - In cPanel, go to **MySQL Databases** → Create a database (e.g., `user_bakebliss`).
-   - Create a MySQL user and assign it to the database with **ALL PRIVILEGES**.
-3. **Import SQL**: Open **phpMyAdmin** in cPanel, select your newly created database, and import `database.sql`.
-4. **Configure `.env`**: Create a `.env` file in the root of your hosting directory with the database credentials:
+1. Sign up for a free account at [InfinityFree](https://www.infinityfree.com/).
+2. Create a new account and choose a free subdomain (e.g., `bakebliss.infinityfreeapp.com`).
+3. In the control panel, open **MySQL Databases** and create a database (e.g., `if0_xxxx_bakebliss`).
+4. Click **phpMyAdmin** next to the database, go to **Import**, and upload [database.sql](database.sql).
+5. Open the **Online File Manager** (or connect via FTP) and upload the project files into the `htdocs/` folder.
+6. Create a `.env` file in `htdocs/` with your InfinityFree MySQL host, database name, user, and password:
    ```ini
-   DB_HOST=localhost
+   DB_HOST=sqlxxx.infinityfree.com
    DB_PORT=3306
-   DB_NAME=user_bakebliss
-   DB_USER=user_dbuser
-   DB_PASS=YourStrongPasswordHere
+   DB_NAME=if0_xxxx_bakebliss
+   DB_USER=if0_xxxx
+   DB_PASS=YourHostingPassword
    ```
-5. **Permissions**: Ensure the `uploads/` folder has write permissions (`chmod 755` or `chmod 775`).
+7. Your app is live permanently at `https://bakebliss.infinityfreeapp.com`.
+
+---
+
+### Trial Option 3: Railway (30-Day Free Trial)
+
+If you only need a quick live demo for testing or a 30-day class evaluation:
+1. Sign in to [Railway.app](https://railway.app/) using GitHub.
+2. Click **New Project** → **Provision MySQL**.
+3. Click **New Service** → **GitHub Repo** → select `6_OEP_CO-BTech-III-SEM-V-Div-1_ODD-25`.
+4. Add environment variable: `DATABASE_URL` = `${{MySQL.MYSQL_URL}}`.
+5. Under **Settings** → **Networking**, click **Generate Domain**.
 
 ---
 

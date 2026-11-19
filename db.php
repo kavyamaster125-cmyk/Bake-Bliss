@@ -89,8 +89,9 @@ if (!function_exists('bakebliss_db')) {
         $name = bakebliss_env('DB_NAME', 'bakebliss');
         $user = bakebliss_env('DB_USER', 'root');
         $pass = bakebliss_env('DB_PASS', '');
+        $ssl  = bakebliss_env('DB_SSL', 'false');
 
-        // Support cloud database connection URLs (e.g., Railway, Render, Fly.io, TiDB Cloud, Clever Cloud)
+        // Support cloud database connection URLs (e.g., Railway, Render, TiDB Cloud, Aiven, Clever Cloud)
         $dbUrl = bakebliss_env('DATABASE_URL') ?: bakebliss_env('MYSQL_URL') ?: bakebliss_env('JAWSDB_URL') ?: bakebliss_env('CLEARDB_DATABASE_URL');
         if ($dbUrl) {
             $parsed = parse_url($dbUrl);
@@ -113,6 +114,9 @@ if (!function_exists('bakebliss_db')) {
                         $name = $dbPath;
                     }
                 }
+                if (!empty($parsed['query']) && (strpos($parsed['query'], 'ssl') !== false)) {
+                    $ssl = 'true';
+                }
             }
         }
 
@@ -121,6 +125,11 @@ if (!function_exists('bakebliss_db')) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
+
+        // If SSL is requested or detected (e.g., TiDB Cloud Serverless or Aiven), enable PDO SSL options
+        if ($ssl === 'true' || $ssl === '1') {
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        }
 
         try {
             // First attempt: Connect directly to target database
