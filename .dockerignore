@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.env.*
+.agents
+RazerCortexGameClip
+*.sql
+*.zip
+*.log
+.DS_Store
+Thumbs.db
