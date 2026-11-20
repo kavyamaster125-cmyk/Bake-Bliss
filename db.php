@@ -125,7 +125,32 @@ if (!function_exists('bakebliss_db')) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
+$dbHost = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com';
+$dbPort = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?? '4000';
+$dbName = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'test';
+$dbUser = $_ENV['DB_USER'] ?? getenv('DB_USER') ?? '2jaAwRS9k2JaqJh.root';
+$dbPass = $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? '';
+$dbSsl  = filter_var($_ENV['DB_SSL'] ?? getenv('DB_SSL') ?? 'true', FILTER_VALIDATE_BOOLEAN);
 
+$dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
+
+$options = [
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+];
+
+if ($dbSsl) {
+    if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+    }
+    $sslCa = $_ENV['DB_SSL_CA'] ?? getenv('DB_SSL_CA') ?? '';
+    if (!empty($sslCa) && defined('PDO::MYSQL_ATTR_SSL_CA')) {
+        $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+    }
+}
+
+$pdo = new PDO($dsn, $dbUser, $dbPass, $options);
         // If SSL is requested or detected (e.g., TiDB Cloud Serverless or Aiven), enable PDO SSL options
         if ($ssl === 'true' || $ssl === '1') {
             $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
