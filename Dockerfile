@@ -4,6 +4,10 @@
 
 FROM php:8.2-apache
 
+# Install CA certificates for secure SSL/TLS connections (e.g. TiDB Cloud Serverless)
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install required PHP extensions for MySQL connectivity
 RUN docker-php-ext-install pdo pdo_mysql mysqli
 

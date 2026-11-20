@@ -7,8 +7,8 @@ try {
     require_once __DIR__ . '/db.php';
     $pdo = bakebliss_db();
 } catch (PDOException $e) {
-    // In production, don't echo $e->getMessage()
-    die("<script>alert('Database connection failed.'); window.location='signup.html';</script>");
+    $err = addslashes($e->getMessage());
+    die("<script>alert('Database connection failed: " . $err . "'); window.location='signup.html';</script>");
 }
 
 // --- Collect & sanitize input ---

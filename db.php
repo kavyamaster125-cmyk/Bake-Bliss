@@ -4,6 +4,7 @@
  *
  * Configurable via environment variables (with fallback defaults for local XAMPP/MySQL).
  * Supports standard DB_* variables as well as cloud-provided DATABASE_URL / MYSQL_URL strings.
+ * Fully compatible with TiDB Cloud Serverless (automatic SSL/TLS negotiation).
  */
 
 if (!function_exists('bakebliss_load_env')) {
@@ -24,7 +25,7 @@ if (!function_exists('bakebliss_load_env')) {
 
         foreach ($lines as $line) {
             $line = trim($line);
-            // Skip empty lines and comment lines
+            // Skip empty lines and comments
             if ($line === '' || strpos($line, '#') === 0) {
                 continue;
             }
@@ -89,7 +90,7 @@ if (!function_exists('bakebliss_db')) {
         $name = bakebliss_env('DB_NAME', 'bakebliss');
         $user = bakebliss_env('DB_USER', 'root');
         $pass = bakebliss_env('DB_PASS', '');
-        $ssl  = bakebliss_env('DB_SSL', 'false');
+        $ssl  = bakebliss_env('DB_SSL', '');
 
         // Support cloud database connection URLs (e.g., Railway, Render, TiDB Cloud, Aiven, Clever Cloud)
         $dbUrl = bakebliss_env('DATABASE_URL') ?: bakebliss_env('MYSQL_URL') ?: bakebliss_env('JAWSDB_URL') ?: bakebliss_env('CLEARDB_DATABASE_URL');
@@ -125,35 +126,37 @@ if (!function_exists('bakebliss_db')) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
-$dbHost = $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? 'gateway01.ap-northeast-1.prod.aws.tidbcloud.com';
-$dbPort = $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?? '4000';
-$dbName = $_ENV['DB_NAME'] ?? getenv('DB_NAME') ?? 'test';
-$dbUser = $_ENV['DB_USER'] ?? getenv('DB_USER') ?? '2jaAwRS9k2JaqJh.root';
-$dbPass = $_ENV['DB_PASS'] ?? getenv('DB_PASS') ?? '';
-$dbSsl  = filter_var($_ENV['DB_SSL'] ?? getenv('DB_SSL') ?? 'true', FILTER_VALIDATE_BOOLEAN);
 
-$dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
+        // Auto-detect if SSL/TLS is required (e.g. TiDB Cloud Serverless, port 4000, or DB_SSL flag)
+        $needsSsl = ($ssl === 'true' || $ssl === '1' || $port === '4000' || strpos($host, 'tidbcloud.com') !== false);
+        if ($needsSsl) {
+            $caBundle = null;
+            $possibleCaPaths = [
+                bakebliss_env('DB_SSL_CA'),
+                '/etc/ssl/certs/ca-certificates.crt', // Debian / Ubuntu (Render Docker)
+                '/etc/pki/tls/certs/ca-bundle.crt',   // RHEL / CentOS
+                '/etc/ssl/ca-bundle.pem',              // OpenSUSE
+                '/etc/ssl/cert.pem',                   // Alpine / macOS
+                'C:\\xampp\\apache\\bin\\curl-ca-bundle.crt', // Windows XAMPP
+                'C:\\xampp\\perl\\vendor\\lib\\Mozilla\\CA\\cacert.pem', // Windows Perl CA
+            ];
 
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
+            foreach ($possibleCaPaths as $path) {
+                if (!empty($path) && file_exists($path) && is_readable($path)) {
+                    $caBundle = $path;
+                    break;
+                }
+            }
 
-if ($dbSsl) {
-    if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
-        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
-    }
-    $sslCa = $_ENV['DB_SSL_CA'] ?? getenv('DB_SSL_CA') ?? '';
-    if (!empty($sslCa) && defined('PDO::MYSQL_ATTR_SSL_CA')) {
-        $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
-    }
-}
+            if ($caBundle !== null) {
+                $options[PDO::MYSQL_ATTR_SSL_CA] = $caBundle;
+            } else {
+                $options[PDO::MYSQL_ATTR_SSL_CA] = true;
+            }
 
-$pdo = new PDO($dsn, $dbUser, $dbPass, $options);
-        // If SSL is requested or detected (e.g., TiDB Cloud Serverless or Aiven), enable PDO SSL options
-        if ($ssl === 'true' || $ssl === '1') {
-            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+            if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+            }
         }
 
         try {
@@ -164,7 +167,7 @@ $pdo = new PDO($dsn, $dbUser, $dbPass, $options);
             // Error code 1049 indicates the database does not exist yet.
             // On local setups, attempt to create the database automatically.
             $isUnknownDb = ($e->getCode() === 1049 || strpos($e->getMessage(), 'Unknown database') !== false);
-            if ($isUnknownDb) {
+            if ($isUnknownDb && ($host === 'localhost' || $host === '127.0.0.1')) {
                 try {
                     $serverDsn = "mysql:host={$host};port={$port};charset=utf8mb4";
                     $pdo = new PDO($serverDsn, $user, $pass, $options);

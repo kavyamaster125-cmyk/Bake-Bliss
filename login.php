@@ -9,7 +9,8 @@ try {
     $pdo = bakebliss_db();
 } 
 catch (PDOException $e) {
-    die(json_encode(["success" => false, "message" => "Database connection failed."]));
+    $err = addslashes($e->getMessage());
+    die("<script>alert('Database connection failed: " . $err . "'); window.location='login.html';</script>");
 }
 
 // ---- FORM VALUES ----
